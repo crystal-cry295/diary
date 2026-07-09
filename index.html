@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>日记</title>
+<style>
+:root{--bg:#fff;--fg:#222;--grey:#999;--light:#f5f5f5;--border:#e8e8e8}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--fg);min-height:100vh;-webkit-text-size-adjust:100%}
+button{touch-action:manipulation;cursor:pointer;border:none;outline:none;font-family:inherit;min-height:44px}
+input,textarea{outline:none;border:1px solid #ccc;font-family:inherit;font-size:16px}
+input:focus,textarea:focus{border-color:#555}
+
+/* 密码 */
+#pwd-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;padding:1rem}
+#pwd-screen h1{font-size:clamp(1.5rem,5vw,2rem);font-weight:300;margin-bottom:2rem;letter-spacing:.1em;color:#333}
+#pwd-screen .hint{font-size:.85rem;color:var(--grey);margin-bottom:1.5rem;text-align:center}
+#pwd-screen input{width:min(200px,60vw);padding:.75rem 1rem;font-size:1.5rem;text-align:center;letter-spacing:.5em;border:1px solid #ddd;border-radius:4px}
+#pwd-screen button{margin-top:1rem;padding:.7rem 2.5rem;background:#333;color:#fff;font-size:.95rem;border-radius:4px}
+#pwd-screen .error{color:#c0392b;font-size:.85rem;margin-top:.5rem;min-height:1.2em;text-align:center}
+#pwd-screen .import-link{margin-top:2rem;color:var(--grey);font-size:.8rem;cursor:pointer;text-decoration:underline}
+#pwd-screen .status{font-size:.75rem;color:#bbb;margin-top:2rem}
+
+/* 主界面 */
+#main{display:none;max-width:720px;margin:0 auto;padding:1rem 1rem 6rem}
+#main.on{display:block}
+.toolbar{display:flex;justify-content:space-between;align-items:center;padding:1rem 0;border-bottom:1px solid var(--border);margin-bottom:1.5rem;position:sticky;top:0;background:var(--bg);z-index:10}
+.toolbar h1{font-size:1.2rem;font-weight:400}
+.toolbar .acts{display:flex;gap:.5rem}
+.toolbar button{padding:.5rem .75rem;font-size:.8rem;border-radius:4px;background:var(--light);color:#555;border:1px solid var(--border);min-height:36px}
+.toolbar button.pri{background:#222;color:#fff;border-color:#222}
+
+.list{display:flex;flex-direction:column;gap:2rem}
+.entry{border-bottom:1px solid #f0f0f0;padding-bottom:1.5rem}
+.entry .meta{font-size:.75rem;color:#aaa;margin-bottom:.6rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.3rem}
+.entry .meta .left{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+.entry .meta .date{font-weight:500}
+.entry .meta .updated{color:#ccc;font-size:.7rem}
+.entry .meta .acts2{display:flex;gap:.3rem}
+.entry .meta .acts2 button{font-size:.7rem;padding:.3rem .5rem;min-height:30px;border-radius:3px;background:none;color:#bbb;border:1px solid #eee}
+.entry .meta .acts2 button:hover{color:var(--fg);border-color:#ccc}
+.entry .body{font-size:clamp(.85rem,2.5vw,.95rem);line-height:1.9;white-space:pre-wrap;word-break:break-word}
+.entry .body.editing textarea{width:100%;min-height:200px;padding:.75rem;font-size:inherit;line-height:1.9;border:1px solid #ddd;border-radius:4px;resize:vertical}
+.entry .body .edit-acts{margin-top:.5rem;display:flex;gap:.5rem}
+.entry .body .edit-acts button{padding:.4rem 1rem;font-size:.8rem;border-radius:4px;min-height:36px}
+.entry .body .edit-acts .sv{background:#222;color:#fff}
+.entry .body .edit-acts .cc{background:var(--light);color:#555;border:1px solid var(--border)}
+.entry .imgs{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.75rem}
+.entry .imgs img{max-width:100%;max-height:320px;border-radius:4px;border:1px solid #f0f0f0;cursor:pointer}
+
+/* FAB */
+#fab{display:none;position:fixed;bottom:1.5rem;right:1.5rem;width:56px;height:56px;border-radius:50%;background:#222;color:#fff;font-size:1.5rem;box-shadow:0 4px 16px rgba(0,0,0,.15);z-index:50;justify-content:center;align-items:center}
+#fab.on{display:flex}
+
+.overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.3);z-index:100;justify-content:center;align-items:flex-start;padding:2rem 1rem}
+.overlay.on{display:flex}
+.modal{background:#fff;border-radius:8px;padding:1.5rem;width:100%;max-width:600px;max-height:85vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.12)}
+.modal h2{font-size:1.1rem;font-weight:500;margin-bottom:1rem}
+.modal textarea{width:100%;min-height:200px;padding:.75rem;font-size:16px;line-height:1.8;border:1px solid #e0e0e0;border-radius:4px;resize:vertical}
+.modal .upl{margin-top:.75rem}
+.modal .upl label{display:inline-block;padding:.5rem 1rem;background:var(--light);color:#555;border:1px solid var(--border);border-radius:4px;font-size:.85rem;cursor:pointer;min-height:44px;line-height:28px}
+.modal .upl input[type=file]{display:none}
+.modal .prevs{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.5rem}
+.modal .prevs .pw{position:relative}
+.modal .prevs img{height:64px;border-radius:4px;border:1px solid #eee}
+.modal .prevs .rm{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#c0392b;color:#fff;font-size:12px;line-height:20px;text-align:center;cursor:pointer}
+.modal .btns{display:flex;gap:.5rem;margin-top:1.2rem;justify-content:flex-end}
+.modal .btns button{padding:.6rem 1.5rem;font-size:.9rem;border-radius:4px;min-height:44px}
+.modal .btns .s{background:#222;color:#fff}
+.modal .btns .c{background:var(--light);color:#555;border:1px solid var(--border)}
+.confirm-box{padding:1rem;text-align:center}
+.confirm-box p{font-size:.95rem;margin-bottom:1.2rem}
+.confirm-box .btns2{display:flex;gap:.5rem;justify-content:center}
+.confirm-box .btns2 button{padding:.6rem 2rem;font-size:.9rem;border-radius:4px;min-height:44px}
+.confirm-box .btns2 .c2{background:var(--light);color:#555;border:1px solid var(--border)}
+.confirm-box .btns2 .d2{background:#c0392b;color:#fff}
+
+#progress{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,.97);z-index:200;flex-direction:column;align-items:center;justify-content:center}
+#progress.on{display:flex}
+#progress .bar{width:min(300px,70vw);height:4px;background:#eee;border-radius:2px;margin-top:1rem;overflow:hidden}
+#progress .bar div{height:100%;background:#333;transition:width .3s}
+#progress .msg{font-size:.85rem;color:var(--grey);margin-top:.5rem}
+#toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:.6rem 1.5rem;border-radius:20px;font-size:.85rem;opacity:0;transition:opacity .3s;z-index:300;pointer-events:none}
+#toast.on{opacity:1}
+.lb{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.9);z-index:400;align-items:center;justify-content:center;cursor:pointer}
+.lb.on{display:flex}
+.lb img{max-width:96%;max-height:96%}
+#loading{text-align:center;color:#ccc;padding:3rem 0}
+@media(min-width:600px){#fab.on{display:none}#main{padding:1.25rem}.toolbar button{min-height:36px}}
+</style>
+</head>
+<body>
+
+<!-- 密码 -->
+<div id="pwd-screen">
+  <h1>📓 日记</h1>
+  <div class="hint" id="pwd-hint">请输入4位数字密码</div>
+  <input type="password" id="pwd-in" maxlength="4" placeholder="****" autocomplete="off" inputmode="numeric" pattern="\d*">
+  <button onclick="checkPwd()">进入</button>
+  <div class="error" id="pwd-err"></div>
+  <div class="import-link" onclick="document.getElementById('import-file').click()">导入已有日记</div>
+  <div class="status" id="api-status"></div>
+</div>
+<input type="file" id="import-file" accept=".json" style="display:none" onchange="doImport(event)" multiple>
+
+<!-- 主界面 -->
+<div id="main">
+  <div class="toolbar">
+    <h1>📓 日记</h1>
+    <div class="acts">
+      <button onclick="document.getElementById('import-file').click()">导入</button>
+      <button onclick="doExport()">导出</button>
+      <button class="pri" onclick="openEditor()">+ 写日记</button>
+    </div>
+  </div>
+  <div class="list" id="list"></div>
+  <div id="loading">加载中...</div>
+  <div id="empty" style="text-align:center;color:#bbb;margin-top:5rem;display:none"><p style="font-size:3rem">📝</p><p style="margin-top:.75rem">还没有日记</p></div>
+</div>
+
+<!-- FAB -->
+<div id="fab" class="on" onclick="openEditor()">+</div>
+
+<!-- 编辑器 -->
+<div class="overlay" id="editor">
+  <div class="modal">
+    <h2>写日记</h2>
+    <textarea id="ed-text" placeholder="今天发生了什么..."></textarea>
+    <div class="upl"><label for="ed-imgs">📷 添加图片</label><input type="file" id="ed-imgs" accept="image/jpeg,image/png" multiple onchange="onImgs(event)"></div>
+    <div class="prevs" id="prevs"></div>
+    <div class="btns"><button class="c" onclick="closeEditor()">取消</button><button class="s" onclick="saveEntry()">保存</button></div>
+  </div>
+</div>
+
+<!-- 确认删除 -->
+<div class="overlay" id="confirm">
+  <div class="modal" style="max-width:360px"><div class="confirm-box"><p>删除这篇日记？</p><div class="btns2"><button class="c2" onclick="closeConfirm()">取消</button><button class="d2" onclick="doDelete()">删除</button></div></div></div>
+</div>
+
+<!-- 进度 -->
+<div id="progress"><p style="font-size:2rem">📥</p><div class="bar"><div id="prog-fill"></div></div><div class="msg" id="prog-msg"></div></div>
+
+<!-- 灯箱 -->
+<div class="lb" id="lb" onclick="closeLb()"><img id="lb-img" src="" alt=""></div>
+<div id="toast"></div>
+
+<script>
+// ==================== API ====================
+let TOKEN = null;
+// 自动检测 API 地址：同域名下用 /api，否则用本地
+const API = window.location.origin;
+
+async function api(method, path, body) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (TOKEN) opts.headers['X-Token'] = TOKEN;
+  if (body) opts.body = JSON.stringify(body);
+  const resp = await fetch(API + path, opts);
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+    throw new Error(err.detail || '请求失败');
+  }
+  return resp.json();
+}
+
+// ==================== 密码 ====================
+const pwdInput = document.getElementById('pwd-in');
+pwdInput.addEventListener('keydown', e => { if (e.key === 'Enter') checkPwd(); });
+
+async function init() {
+  try {
+    const s = await api('GET', '/api/password/status');
+    document.getElementById('api-status').textContent = '🟢 已连接服务器';
+    const hint = document.getElementById('pwd-hint');
+    hint.textContent = s.hasPassword ? '请输入4位数字密码' : '首次使用，请设置4位数字密码';
+  } catch {
+    document.getElementById('api-status').textContent = '🔴 无法连接服务器';
+  }
+  pwdInput.focus();
+}
+
+async function checkPwd() {
+  const v = pwdInput.value.trim();
+  try {
+    const s = await api('GET', '/api/password/status');
+    if (!s.hasPassword) {
+      if (!/^\d{4}$/.test(v)) { document.getElementById('pwd-err').textContent = '请输入4位数字密码'; return; }
+      await api('POST', '/api/password/set', { password: v });
+      toast('🔒 密码已设置');
+    } else {
+      await api('POST', '/api/password/verify', { password: v });
+    }
+    TOKEN = v;
+    document.getElementById('pwd-err').textContent = '';
+    enter();
+  } catch (e) {
+    document.getElementById('pwd-err').textContent = e.message || '密码错误';
+    pwdInput.value = '';
+    pwdInput.focus();
+  }
+}
+
+async function enter() {
+  document.getElementById('pwd-screen').style.display = 'none';
+  document.getElementById('main').classList.add('on');
+  await rl();
+}
+
+init();
+
+// ==================== 渲染 ====================
+let entriesCache = [];
+
+async function rl() {
+  document.getElementById('loading').style.display = 'block';
+  try {
+    entriesCache = await api('GET', '/api/diaries');
+  } catch(e) {
+    entriesCache = [];
+    toast('加载失败: ' + e.message);
+  }
+  document.getElementById('loading').style.display = 'none';
+  const list = document.getElementById('list'), empty = document.getElementById('empty');
+  if (!entriesCache.length) { list.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  list.innerHTML = entriesCache.map(e => {
+    const upd = e.updatedAt && e.updatedAt !== e.createdAt ? `<span class="updated">（编辑于${e.updatedAt}）</span>` : '';
+    return `<div class="entry" id="entry-${e.id}">
+      <div class="meta"><div class="left"><span class="date">${e.createdAt}</span>${upd}</div><div class="acts2"><button onclick="editEntry('${e.id}')">编辑</button><button onclick="askDel('${e.id}')" style="color:#d88">删除</button></div></div>
+      <div class="body" id="body-${e.id}"><div class="content-text">${esc(e.content)}</div></div>
+      ${e.images && e.images.length ? `<div class="imgs">${e.images.map(i => `<img src="${i.data}" alt="" onclick="event.stopPropagation();lb('${i.data}')" loading="lazy">`).join('')}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function esc(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+// ==================== 编辑 ====================
+async function editEntry(id) {
+  const e = entriesCache.find(x => x.id === id); if (!e) return;
+  const body = document.getElementById('body-' + id);
+  body.classList.add('editing');
+  body.innerHTML = `<textarea id="edit-ta-${id}">${esc(e.content)}</textarea><div class="edit-acts"><button class="sv" onclick="saveEdit('${id}')">保存修改</button><button class="cc" onclick="cancelEdit('${id}',\`${esc(e.content)}\`)">取消</button></div>`;
+  document.getElementById('edit-ta-' + id).focus();
+  setUnsaved(true);
+}
+
+async function saveEdit(id) {
+  const ta = document.getElementById('edit-ta-' + id); if (!ta) return;
+  const newContent = ta.value.trim();
+  if (!newContent) { toast('内容不能为空'); return; }
+  const now = fmtTime(new Date());
+  const e = entriesCache.find(x => x.id === id);
+  try {
+    await api('PUT', '/api/diaries/' + id, { content: newContent, updatedAt: now, images: e.images });
+    setUnsaved(false);
+    toast('已保存');
+    await rl();
+  } catch (er) { toast('保存失败: ' + er.message); }
+}
+
+async function cancelEdit(id, oldContent) {
+  document.getElementById('body-' + id).classList.remove('editing');
+  document.getElementById('body-' + id).innerHTML = `<div class="content-text">${oldContent}</div>`;
+  setUnsaved(false);
+}
+
+// ==================== 新建 ====================
+let editId = null, pendImgs = [];
+function openEditor() { editId = null; pendImgs = []; document.getElementById('ed-text').value = ''; document.getElementById('prevs').innerHTML = ''; document.getElementById('ed-imgs').value = ''; document.getElementById('editor').classList.add('on'); document.getElementById('ed-text').focus(); setUnsaved(true); }
+function closeEditor() { document.getElementById('editor').classList.remove('on'); pendImgs = []; setUnsaved(false); }
+function onImgs(e) { const files = Array.from(e.target.files); for (const f of files) { if (f.size > 2 * 1024 * 1024) { toast('⚠️ ' + f.name + ' 超2MB'); continue; } const r = new FileReader(); r.onload = function() { pendImgs.push({ data: r.result, name: f.name }); rp(); }; r.readAsDataURL(f); } e.target.value = ''; }
+function rp() { document.getElementById('prevs').innerHTML = pendImgs.map((img, i) => `<div class="pw"><img src="${img.data}" alt=""><div class="rm" onclick="pendImgs.splice(${i},1);rp()">×</div></div>`).join(''); }
+
+async function saveEntry() {
+  const text = document.getElementById('ed-text').value.trim();
+  if (!text && !pendImgs.length) return;
+  const now = fmtTime(new Date());
+  const entry = { id: 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), createdAt: now, updatedAt: now, content: text, images: pendImgs.slice() };
+  try {
+    await api('POST', '/api/diaries', entry);
+    closeEditor();
+    await rl();
+    toast('✅ 已保存');
+  } catch (er) { toast('❌ ' + er.message); }
+}
+
+// ==================== 删除 ====================
+let delId = null;
+function askDel(id) { delId = id; document.getElementById('confirm').classList.add('on'); }
+function closeConfirm() { delId = null; document.getElementById('confirm').classList.remove('on'); }
+async function doDelete() {
+  if (!delId) return;
+  try { await api('DELETE', '/api/diaries/' + delId); toast('已删除'); await rl(); } catch (er) { toast('❌ ' + er.message); }
+  closeConfirm();
+}
+
+// ==================== 导入/导出 ====================
+async function doExport() {
+  try {
+    const entries = await api('GET', '/api/diaries');
+    const blob = new Blob([JSON.stringify(entries, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob), a = document.createElement('a');
+    a.href = url; a.download = `diary_${new Date().toISOString().slice(0, 10)}.json`; a.click();
+    URL.revokeObjectURL(url); toast('✅ 导出 ' + entries.length + ' 篇');
+  } catch (er) { toast('❌ ' + er.message); }
+}
+
+async function doImport(e) {
+  const files = Array.from(e.target.files); if (!files.length) return;
+  const prog = document.getElementById('progress'), fill = document.getElementById('prog-fill'), msg = document.getElementById('prog-msg');
+  prog.classList.add('on'); fill.style.width = '0%';
+
+  let total = 0, done = 0, errs = 0;
+  for (let fi = 0; fi < files.length; fi++) {
+    const file = files[fi];
+    msg.textContent = '读取 ' + file.name + '...';
+    let text;
+    try { text = await new Promise((r, j) => { const rr = new FileReader(); rr.onload = () => r(rr.result); rr.onerror = () => j(rr.error); rr.readAsText(file); }); }
+    catch { errs++; continue; }
+
+    let data;
+    try { data = JSON.parse(text); if (!Array.isArray(data)) throw new Error('格式错误'); }
+    catch { errs++; continue; }
+
+    total += data.length;
+    const B = 50;
+    for (let i = 0; i < data.length; i += B) {
+      const batch = data.slice(i, i + B);
+      try {
+        await api('POST', '/api/import', { entries: batch });
+        done += batch.length;
+      } catch {
+        // 逐个重试
+        for (const entry of batch) {
+          try { await api('POST', '/api/diaries', entry); done++; }
+          catch { errs++; }
+        }
+      }
+      fill.style.width = Math.round(done / total * 100) + '%';
+      msg.textContent = `${done}/${total} · 失败${errs}`;
+    }
+  }
+  prog.classList.remove('on');
+  toast(`✅ ${done}篇（${errs}失败）`);
+  await rl();
+  e.target.value = '';
+}
+
+// ==================== 工具 ====================
+function fmtTime(d) { const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; }
+function lb(src) { document.getElementById('lb-img').src = src; document.getElementById('lb').classList.add('on'); }
+function closeLb() { document.getElementById('lb').classList.remove('on'); }
+let tt; function toast(m) { const el = document.getElementById('toast'); el.textContent = m; el.classList.add('on'); clearTimeout(tt); tt = setTimeout(() => el.classList.remove('on'), 2200); }
+let hasUnsaved = false;
+function setUnsaved(v) { hasUnsaved = v; }
+window.addEventListener('beforeunload', e => { if (hasUnsaved) { e.preventDefault(); e.returnValue = ''; } });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeEditor(); closeConfirm(); closeLb(); }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'n') { e.preventDefault(); if (document.getElementById('main').classList.contains('on')) openEditor(); }
+});
+let lastScroll = 0;
+window.addEventListener('scroll', () => {
+  const fab = document.getElementById('fab'); if (!fab.classList.contains('on')) return;
+  const now = window.scrollY; fab.style.opacity = now > lastScroll && now > 200 ? '0.4' : '1'; lastScroll = now;
+}, { passive: true });
+</script>
+</body>
+</html>
