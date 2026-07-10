@@ -58,23 +58,22 @@ def save_images(images_data: list) -> list:
         saved.append({"name": fname, "path": f"/img/{fname}"})
     return saved
 
-def load_images(saved: list) -> list:
-    """从磁盘路径还原为 base64"""
+def image_urls(saved: list) -> list:
+    """将存储的图片转为前端可用的 URL 路径"""
     result = []
     for img in saved:
         if "path" in img:
-            fpath = IMG_DIR / img["name"]
-            if fpath.exists():
-                raw = fpath.read_bytes()
-                ext = fpath.suffix[1:]
-                mime = f"image/{'jpeg' if ext in ('jpg','jpeg') else ext}"
-                b64 = base64.b64encode(raw).decode()
-                result.append({"data": f"data:{mime};base64,{b64}", "name": img["name"]})
-            else:
-                result.append(img)
-        elif "data" in img:
+            # 同时提供 url 和 data fallback，data 用服务器路径
+            result.append({"url": img["path"], "data": img["path"], "name": img.get("name", "")})
+        elif "data" in img and img["data"].startswith("data:"):
+            result.append(img)
+        else:
             result.append(img)
     return result
+
+def load_images_as_base64(saved: list) -> list:
+    """仅在新建/导入时用于保存 base64，列表接口不再使用"""
+    return image_urls(saved)
 
 # ==================== API ====================
 
@@ -111,7 +110,7 @@ async def list_diaries():
         images = json.loads(r[4]) if r[4] else []
         entries.append({
             "id": r[0], "createdAt": r[1], "updatedAt": r[2],
-            "content": r[3], "images": load_images(images)
+            "content": r[3], "images": image_urls(images)
         })
     return entries
 

@@ -228,7 +228,7 @@ async function rl() {
     return `<div class="entry" id="entry-${e.id}">
       <div class="meta"><div class="left"><span class="date">${e.createdAt}</span>${upd}</div><div class="acts2"><button onclick="editEntry('${e.id}')">编辑</button><button onclick="askDel('${e.id}')" style="color:#d88">删除</button></div></div>
       <div class="body" id="body-${e.id}"><div class="content-text">${esc(e.content)}</div></div>
-      ${e.images && e.images.length ? `<div class="imgs">${e.images.map(i => `<img src="${i.data}" alt="" onclick="event.stopPropagation();lb('${i.data}')" loading="lazy">`).join('')}</div>` : ''}
+      ${e.images && e.images.length ? `<div class="imgs">${e.images.map(i => `<img src="${i.url||i.data}" alt="" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22150%22><rect fill=%22%23f5f5f5%22 width=%22200%22 height=%22150%22/><text x=%22100%22 y=%2275%22 text-anchor=%22middle%22 fill=%22%23ccc%22 font-size=%2214%22>图片加载失败</text></svg>'" onclick="event.stopPropagation();lb('${i.url||i.data}')" loading="lazy">`).join('')}</div>` : ''}
     </div>`;
   }).join('');
 }
